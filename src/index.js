@@ -4,145 +4,203 @@ import Web3 from "web3";
 import FilterMgr from "./filter";
 import RPCServer from "./rpc";
 import Utils from "./utils";
-import IdMapping from "./id_mapping";
+import EventEmitter from "events";
 
-class TrustWeb3Provider {
+class TrustWeb3Provider extends EventEmitter {
   constructor(config) {
-    this.setConfig(config);
-
-    this.idMapping = new IdMapping();
-
-    this.callbacks = new Map;
+    super();
     this.isTrust = true;
-  }
+    this.chainId = config.chainId;
+    this.address = (config.address || "").toLowerCase();
+    this.ready = !!config.address;
 
-  isConnected() {
-    return true;
+    this._rpc = new RPCServer(config.rpcUrl);
+    this._filterMgr = new FilterMgr(this._rpc);
+    this._promises = {};
+    this._connect();
   }
 
   setAddress(address) {
     this.address = (address || "").toLowerCase();
     this.ready = !!address;
+
+    this._emitAccountsChanged([this.address]);
   }
 
   setConfig(config) {
     this.setAddress(config.address);
-
     this.chainId = config.chainId;
-    this.rpc = new RPCServer(config.rpcUrl);
-    this.filterMgr = new FilterMgr(this.rpc);
+    this._rpc = new RPCServer(config.rpcUrl);
+    this._filterMgr = new FilterMgr(this._rpc);
+    this._emitNetworkChanged(this.chainId);
   }
+
+  send(method, params = []) {
+    if (!method || typeof method !== "string") {
+      return new Error("Method is not a valid string.");
+    }
+
+    if (!(params instanceof Array)) {
+      return new Error("Params is not a valid array.");
+    }
+
+    const id = Utils.genId();
+    const jsonrpc = "2.0";
+    const payload = { jsonrpc, id, method, params };
+
+    const promise = new Promise((resolve, reject) => {
+      this._promises[payload.id] = { resolve, reject };
+    });
+
+    switch(payload.method) {
+      case "eth_accounts":
+        this._resolve(payload.id, this.eth_accounts());
+        break;
+      case "eth_coinbase":
+        this._resolve(payload.id, this.eth_coinbase());
+        break;
+      case "net_version":
+        this._resolve(payload.id, this.net_version());
+        break;
+      case "eth_chainId":
+        this._resolve(payload.id, this.eth_chainId());
+        break;
+      case "eth_sign":
+        this.eth_sign(payload);
+        break;
+      case "personal_sign":
+        this.personal_sign(payload);
+        break;
+      case "personal_ecRecover":
+        this.personal_ecRecover(payload);
+        break;
+      case "eth_signTypedData":
+      case "eth_signTypedData_v3":
+        this.eth_signTypedData(payload);
+        break;
+      case "eth_sendTransaction":
+        this.eth_sendTransaction(payload);
+        break;
+      case "eth_requestAccounts":
+        this.eth_requestAccounts(payload);
+        break;
+      case "eth_newFilter":
+        this.eth_newFilter(payload);
+        break;
+      case "eth_newBlockFilter":
+        this.eth_newBlockFilter(payload);
+        break;
+      case "eth_newPendingTransactionFilter":
+        this.eth_newPendingTransactionFilter(payload);
+        break;
+      case "eth_uninstallFilter":
+        this.eth_uninstallFilter(payload);
+        break;
+      case "eth_getFilterChanges":
+        this.eth_getFilterChanges(payload);
+        break;
+      case "eth_getFilterLogs":
+        this.eth_getFilterLogs(payload);
+        break;
+      default:
+        this._rpc.call(payload).bind(this)
+        .then(data => this._resolve(payload.id, data))
+        .catch(error => this._reject(payload.id, error));
+    }
+
+    return promise;
+  }
+
+  /* Backwards Compatibility */
 
   enable() {
     // this may be undefined somehow
     var that = this || window.ethereum;
-    return that._sendAsync({
-      method: "eth_requestAccounts",
-      params: []
-    })
+    return that.send("eth_requestAccounts", [])
     .then(result => {
       return result.result;
     });
   }
 
-  send(payload) {
-    let response = {
-      jsonrpc: "2.0",
-      id: payload.id
-    };
-    switch(payload.method) {
-      case "eth_accounts":
-        response.result = this.eth_accounts();
-        break;
-      case "eth_coinbase":
-        response.result = this.eth_coinbase();
-        break;
-      case "net_version":
-        response.result = this.net_version();
-        break;
-      case "eth_chainId":
-        response.result = this.eth_chainId();
-        break;
-      case "eth_uninstallFilter":
-        this.sendAsync(payload, (error) => {
-          if (error) {
-            console.log(`<== uninstallFilter ${error}`);
-          }
-        });
-        response.result = true;
-        break;
-      default:
-        throw new Error(`Trust does not support calling ${payload.method} synchronously without a callback. Please provide a callback parameter to call ${payload.method} asynchronously.`);
-    }
-    return response;
-  }
-
   sendAsync(payload, callback) {
     if (Array.isArray(payload)) {
-      Promise.all(payload.map(this._sendAsync.bind(this)))
+      Promise.all(
+        payload.map(this.send(payload.method, payload.params).bind(this))
+      )
       .then(data => callback(null, data))
       .catch(error => callback(error, null));
     } else {
-      this._sendAsync(payload)
+      this.send(payload.method, payload.params)
       .then(data => callback(null, data))
       .catch(error => callback(error, null));
     }
   }
 
-  _sendAsync(payload) {
-    this.idMapping.tryIntifyId(payload);
-    return new Promise((resolve, reject) => {
-      if (!payload.id) {
-        payload.id = Utils.genId();
-      }
-      this.callbacks.set(payload.id, (error, data) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(data);
-        }
+  postMessage(handler, id, data) {
+    if (this.ready || handler === "requestAccounts") {
+      window.webkit.messageHandlers[handler].postMessage({
+        "name": handler,
+        "object": data,
+        "id": id
       });
-
-      switch(payload.method) {
-        case "eth_accounts":
-          return this.sendResponse(payload.id, this.eth_accounts());
-        case "eth_coinbase":
-          return this.sendResponse(payload.id, this.eth_coinbase());
-        case "net_version":
-          return this.sendResponse(payload.id, this.net_version());
-        case "eth_chainId":
-          return this.sendResponse(payload.id, this.eth_chainId());
-        case "eth_sign":
-          return this.eth_sign(payload);
-        case "personal_sign":
-          return this.personal_sign(payload);
-        case "personal_ecRecover":
-          return this.personal_ecRecover(payload);
-        case "eth_signTypedData":
-        case "eth_signTypedData_v3":
-          return this.eth_signTypedData(payload);
-        case "eth_sendTransaction":
-          return this.eth_sendTransaction(payload);
-        case "eth_requestAccounts":
-          return this.eth_requestAccounts(payload);
-        case "eth_newFilter":
-          return this.eth_newFilter(payload);
-        case "eth_newBlockFilter":
-          return this.eth_newBlockFilter(payload);
-        case "eth_newPendingTransactionFilter":
-          return this.eth_newPendingTransactionFilter(payload);
-        case "eth_uninstallFilter":
-          return this.eth_uninstallFilter(payload);
-        case "eth_getFilterChanges":
-          return this.eth_getFilterChanges(payload);
-        case "eth_getFilterLogs":
-          return this.eth_getFilterLogs(payload);
-        default:
-          this.callbacks.delete(payload.id);
-          return this.rpc.call(payload).then(resolve).catch(reject);
-      }
-    });
+    } else {
+      // don"t forget to verify in the app
+      this._reject(id, new Error("provider is not ready"));
+    }
   }
+
+  _resolve(id, result) {
+    let data = {jsonrpc: "2.0", id: id};
+    if (typeof result === "object" && result.jsonrpc && result.result) {
+      data.result = result.result;
+    } else {
+      data.result = result;
+    }
+    let { resolve } = this._promises[id];
+    if (resolve) {
+      resolve(data);
+      delete this._promises[id];
+    }
+  }
+
+  _reject(id, error) {
+    // eslint-disable-next-line no-console
+    console.log(`<== ${id} _reject ${error}`);
+    let { reject } = this._promises[id];
+    if (reject) {
+      // TODO: follow https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1193.md#errors
+      reject(error instanceof Error ? error : new Error(error), null);
+      delete this._promises[id];
+    }
+  }
+
+  _connect() {
+    this._emitConnect();
+  }
+
+  /* Events */
+
+  _emitNotification(result) {
+    this.emit("notification", result);
+  }
+
+  _emitConnect() {
+    this.emit("connect");
+  }
+
+  _emitClose(code, reason) {
+    this.emit("close", code, reason);
+  }
+
+  _emitNetworkChanged(networkId) {
+    this.emit("networkChanged", networkId);
+  }
+
+  _emitAccountsChanged(accounts) {
+    this.emit("accountsChanged", accounts);
+  }
+
+  /* Internal RPC handlers */
 
   eth_accounts() {
     return this.address ? [this.address] : [];
@@ -185,76 +243,39 @@ class TrustWeb3Provider {
   }
 
   eth_newFilter(payload) {
-    this.filterMgr.newFilter(payload)
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+    this._filterMgr.newFilter(payload)
+    .then(filterId => this._resolve(payload.id, filterId))
+    .catch(error => this._reject(payload.id, error));
   }
 
   eth_newBlockFilter(payload) {
-    this.filterMgr.newBlockFilter()
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+    this._filterMgr.newBlockFilter()
+    .then(filterId => this._resolve(payload.id, filterId))
+    .catch(error => this._reject(payload.id, error));
   }
 
   eth_newPendingTransactionFilter(payload) {
-    this.filterMgr.newPendingTransactionFilter()
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+    this._filterMgr.newPendingTransactionFilter()
+    .then(filterId => this._resolve(payload.id, filterId))
+    .catch(error => this._reject(payload.id, error));
   }
 
   eth_uninstallFilter(payload) {
-    this.filterMgr.uninstallFilter(payload.params[0])
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+    this._filterMgr.uninstallFilter(payload.params[0])
+    .then(filterId => this._resolve(payload.id, filterId))
+    .catch(error => this._reject(payload.id, error));
   }
 
   eth_getFilterChanges(payload) {
-    this.filterMgr.getFilterChanges(payload.params[0])
-    .then(data => this.sendResponse(payload.id, data))
-    .catch(error => this.sendError(payload.id, error));
+    this._filterMgr.getFilterChanges(payload.params[0])
+    .then(data => this._resolve(payload.id, data))
+    .catch(error => this._reject(payload.id, error));
   }
 
   eth_getFilterLogs(payload) {
-    this.filterMgr.getFilterLogs(payload.params[0])
-    .then(data => this.sendResponse(payload.id, data))
-    .catch(error => this.sendError(payload.id, error));
-  }
-
-  postMessage(handler, id, data) {
-    if (this.ready || handler === "requestAccounts") {
-      window.webkit.messageHandlers[handler].postMessage({
-        "name": handler,
-        "object": data,
-        "id": id
-      });
-    } else {
-      // don't forget to verify in the app
-      this.sendError(id, new Error("provider is not ready"));
-    }
-  }
-
-  sendResponse(id, result) {
-    let originId = this.idMapping.tryPopId(id) || id;
-    let callback = this.callbacks.get(id);
-    let data = {jsonrpc: "2.0", id: originId};
-    if (typeof result === "object" && result.jsonrpc && result.result) {
-      data.result = result.result;
-    } else {
-      data.result = result;
-    }
-    if (callback) {
-      callback(null, data);
-      this.callbacks.delete(id);
-    }
-  }
-
-  sendError(id, error) {
-    console.log(`<== ${id} sendError ${error}`);
-    let callback = this.callbacks.get(id);
-    if (callback) {
-      callback(error instanceof Error ? error : new Error(error), null);
-      this.callbacks.delete(id);
-    }
+    this._filterMgr.getFilterLogs(payload.params[0])
+    .then(data => this._resolve(payload.id, data))
+    .catch(error => this._reject(payload.id, error));
   }
 }
 

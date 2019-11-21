@@ -1,4 +1,5 @@
 "use strict";
+global.fetch = require('jest-fetch-mock');
 
 require("../index");
 const Trust = window.Trust;
@@ -47,8 +48,8 @@ describe("TrustWeb3Provider constructor tests", () => {
 
     web3.currentProvider.setConfig(mainnet);
     expect(web3.currentProvider.chainId).toEqual(1);
-    expect(web3.currentProvider.rpc.rpcUrl).toBe(mainnet.rpcUrl);
-    expect(web3.currentProvider.filterMgr.rpc.rpcUrl).toBe(mainnet.rpcUrl);
+    expect(web3.currentProvider._rpc.rpcUrl).toBe(mainnet.rpcUrl);
+    expect(web3.currentProvider._filterMgr.rpc.rpcUrl).toBe(mainnet.rpcUrl);
 
     web3.version.getNetwork((error, id) => {
       expect(id).toBe("1");
@@ -64,19 +65,11 @@ describe("TrustWeb3Provider constructor tests", () => {
     };
     const provider = new Trust(ropsten);
     const web3 = new Web3(provider);
-
-    let request = {
-      jsonrpc: "2.0",
-      method: "eth_chainId",
-      id: 123
-    };
-    const response = web3.currentProvider.send(request);
-    expect(response.result).toBe("0x3");
-
-    web3.currentProvider.sendAsync(request, (error, result) => {
-      expect(result.result).toEqual("0x3");
-      done();
-    });
+    web3.currentProvider.send("eth_chainId")
+      .then(data => {
+        expect(data.result).toEqual("0x3");
+        done();
+      });
   });
 });
 
@@ -91,9 +84,9 @@ describe("TrustWeb3Provider FilterMgr tests", () => {
     };
 
     web3.eth.filter(options);
-    const normalized = provider.filterMgr._normalizeFilter(options);
+    const normalized = provider._filterMgr._normalizeFilter(options);
 
-    expect(provider.filterMgr.filters.get(1)).toBeDefined();
+    expect(provider._filterMgr.filters.get(1)).toBeDefined();
     expect(Array.isArray(normalized.address)).toBeTruthy();
   });
 });

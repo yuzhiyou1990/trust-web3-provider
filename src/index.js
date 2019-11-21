@@ -35,7 +35,7 @@ class TrustWeb3Provider extends EventEmitter {
     this._emitNetworkChanged(this.chainId);
   }
 
-  send(method, params = []) {
+  send(method, params) {
     if (!method || typeof method !== "string") {
       return new Error("Method is not a valid string.");
     }

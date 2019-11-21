@@ -14,7 +14,7 @@ class DAppWebViewController: UIViewController {
     @IBOutlet weak var urlField: UITextField!
 
     var homepage: String {
-        return "https://js-eth-sign.surge.sh"
+        return "https://migrate.makerdao.com"
     }
 
     var infuraApiKey: String? {
@@ -26,7 +26,7 @@ class DAppWebViewController: UIViewController {
             address: "0x5Ee066cc1250E367423eD4Bad3b073241612811f",
             chainId: 1,
             rpcUrl: "https://mainnet.infura.io/v3/\(infuraApiKey!)",
-            privacyMode: false
+            privacyMode: true
         )
     }()
 
@@ -41,6 +41,7 @@ class DAppWebViewController: UIViewController {
         config.userContentController = controller
         let webview = WKWebView(frame: .zero, configuration: config)
         webview.translatesAutoresizingMaskIntoConstraints = false
+        webview.uiDelegate = self
         return webview
     }()
 
@@ -109,15 +110,29 @@ extension DAppWebViewController: WKScriptMessageHandler {
             )
             let address = scriptConfig.address
             alert.addAction(UIAlertAction(title: "Cancel", style: .destructive, handler: { [weak webview] _ in
-                webview?.evaluateJavaScript("window.ethereum.sendError(\(id), \"Canceled\")", completionHandler: nil)
+                webview?.evaluateJavaScript("window.ethereum._reject(\(id), \"Canceled\")", completionHandler: { (result, error) in
+                    print(result, error)
+                })
             }))
             alert.addAction(UIAlertAction(title: "Connect", style: .default, handler: { [weak webview] _ in
                 webview?.evaluateJavaScript("window.ethereum.setAddress(\"\(address)\");", completionHandler: nil)
-                webview?.evaluateJavaScript("window.ethereum.sendResponse(\(id), [\"\(address)\"])", completionHandler: nil)
+                webview?.evaluateJavaScript("window.ethereum._resolve(\(id), [\"\(address)\"])", completionHandler: { (result, error) in
+                    print(result, error)
+                })
             }))
             present(alert, animated: true, completion: nil)
         default:
             break
         }
+    }
+}
+
+extension DAppWebViewController: WKUIDelegate {
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        guard navigationAction.request.url != nil else {
+           return nil
+        }
+        _ = webView.load(navigationAction.request)
+        return nil
     }
 }

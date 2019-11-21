@@ -65,7 +65,7 @@ describe("TrustWeb3Provider constructor tests", () => {
     };
     const provider = new Trust(ropsten);
     const web3 = new Web3(provider);
-    web3.currentProvider.send("eth_chainId")
+    web3.currentProvider.send("eth_chainId", [])
       .then(data => {
         expect(data.result).toEqual("0x3");
         done();

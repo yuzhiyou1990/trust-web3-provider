@@ -17,8 +17,7 @@
   "author": "Trust <support@trustwalletapp.com>",
   "license": "MIT",
   "dependencies": {
-    "lodash": "^4.17.13",
-    "web3": "^0.20.7"
+    "lodash": "^4.17.13"
   },
   "devDependencies": {
     "babel-core": "^6.26.3",
@@ -26,6 +25,7 @@
     "eslint": "^5.4.0",
     "jest": "^23.6.0",
     "jest-fetch-mock": "^2.1.2",
-    "parcel-bundler": "^1.12.4"
+    "parcel-bundler": "^1.12.4",
+    "web3": "^1.2.4"
   }
 }

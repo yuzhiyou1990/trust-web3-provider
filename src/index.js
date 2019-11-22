@@ -36,7 +36,7 @@ class TrustWeb3Provider extends EventEmitter {
   }
 
   send(method, params, /* optional request id */ id) {
-    console.log(`<== send ${method} ${JSON.stringify(params)} }`);
+    console.log(`<== send ${method} ${JSON.stringify(params)}`);
     if (!method || typeof method !== "string") {
       return new Error("Method is not a valid string.");
     }
@@ -126,7 +126,7 @@ class TrustWeb3Provider extends EventEmitter {
   }
 
   sendAsync(payload, callback) {
-    console.log(`<== sendAsync ${JSON.stringify(payload)}`);
+    console.log(`<== sendAsync ${JSON.stringify(payload)}, ${callback}`);
     if (Array.isArray(payload)) {
       Promise.all(
         payload.map(this.send(payload.method, payload.params, payload.id)).bind(this)

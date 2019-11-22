@@ -35,7 +35,8 @@ class TrustWeb3Provider extends EventEmitter {
     this._emitNetworkChanged(this.chainId);
   }
 
-  send(method, params) {
+  send(method, params, /* optional request id */ id) {
+    console.log(`<== send ${method} ${JSON.stringify(params)} }`);
     if (!method || typeof method !== "string") {
       return new Error("Method is not a valid string.");
     }
@@ -44,7 +45,9 @@ class TrustWeb3Provider extends EventEmitter {
       return new Error("Params is not a valid array.");
     }
 
-    const id = Utils.genId();
+    if (!id) {
+      id = Utils.genId();
+    }
     const jsonrpc = "2.0";
     const payload = { jsonrpc, id, method, params };
 
@@ -103,7 +106,7 @@ class TrustWeb3Provider extends EventEmitter {
         this.eth_getFilterLogs(payload);
         break;
       default:
-        this._rpc.call(payload).bind(this)
+        this._rpc.call(payload)
         .then(data => this._resolve(payload.id, data))
         .catch(error => this._reject(payload.id, error));
     }
@@ -123,16 +126,17 @@ class TrustWeb3Provider extends EventEmitter {
   }
 
   sendAsync(payload, callback) {
+    console.log(`<== sendAsync ${JSON.stringify(payload)}`);
     if (Array.isArray(payload)) {
       Promise.all(
-        payload.map(this.send(payload.method, payload.params).bind(this))
+        payload.map(this.send(payload.method, payload.params, payload.id)).bind(this)
       )
       .then(data => callback(null, data))
       .catch(error => callback(error, null));
     } else {
-      this.send(payload.method, payload.params)
+      this.send(payload.method, payload.params, payload.id)
       .then(data => callback(null, data))
-      .catch(error => callback(error, null));
+      .catch(error => callback(error instanceof Error ? error : new Error(error), null));
     }
   }
 
@@ -150,6 +154,7 @@ class TrustWeb3Provider extends EventEmitter {
   }
 
   _resolve(id, result) {
+    console.log(`<== ${id} _resolve ${JSON.stringify(result)}`);
     let data = {jsonrpc: "2.0", id: id};
     if (typeof result === "object" && result.jsonrpc && result.result) {
       data.result = result.result;
@@ -165,11 +170,11 @@ class TrustWeb3Provider extends EventEmitter {
 
   _reject(id, error) {
     // eslint-disable-next-line no-console
-    console.log(`<== ${id} _reject ${error}`);
+    console.log(`<== ${id} _reject ${JSON.stringify(error)}`);
     let { reject } = this._promises[id];
     if (reject) {
       // TODO: follow https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1193.md#errors
-      reject(error instanceof Error ? error : new Error(error), null);
+      reject(error instanceof Error ? error : new Error(error));
       delete this._promises[id];
     }
   }

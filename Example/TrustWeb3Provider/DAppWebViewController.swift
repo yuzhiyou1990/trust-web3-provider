@@ -25,8 +25,7 @@ class DAppWebViewController: UIViewController {
         return WKUserScriptConfig(
             address: "0x5Ee066cc1250E367423eD4Bad3b073241612811f",
             chainId: 1,
-            rpcUrl: "https://mainnet.infura.io/\(infuraApiKey!)",
-            privacyMode: true
+            rpcUrl: "https://mainnet.infura.io/v3/\(infuraApiKey!)",
         )
     }()
 
@@ -59,7 +58,7 @@ class DAppWebViewController: UIViewController {
             let alert = UIAlertController(title: "No infura api key found", message: "Please set INFURA_API_KEY", preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
             present(alert, animated: true, completion: nil)
-            return false
+            return true
         }
         return true
     }

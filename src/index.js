@@ -33,6 +33,7 @@ class TrustWeb3Provider extends EventEmitter {
     this._rpc = new RPCServer(config.rpcUrl);
     this._filterMgr = new FilterMgr(this._rpc);
     this._emitNetworkChanged(this.chainId);
+    this._emitChainChanged(this.chainId);
   }
 
   send(method, params, /* optional request id */ id) {
@@ -104,6 +105,9 @@ class TrustWeb3Provider extends EventEmitter {
         break;
       case "eth_getFilterLogs":
         this.eth_getFilterLogs(payload);
+        break;
+      case "eth_subscribe":
+        this.eth_subscribe(payload);
         break;
       default:
         this._rpc.call(payload)
@@ -205,6 +209,10 @@ class TrustWeb3Provider extends EventEmitter {
     this.emit("accountsChanged", accounts);
   }
 
+  _emitChainChanged(chainId) {
+    this.emit("chainChanged", chainId);
+  }
+
   /* Internal RPC handlers */
 
   eth_accounts() {
@@ -241,6 +249,10 @@ class TrustWeb3Provider extends EventEmitter {
 
   eth_sendTransaction(payload) {
     this.postMessage("signTransaction", payload.id, payload.params[0]);
+  }
+
+  eth_subscribe(payload) {
+    this.postMessage("subscribe", payload.id, payload.params[0]);
   }
 
   eth_requestAccounts(payload) {

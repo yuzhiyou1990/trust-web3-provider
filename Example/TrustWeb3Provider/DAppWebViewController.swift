@@ -25,7 +25,7 @@ class DAppWebViewController: UIViewController {
         return WKUserScriptConfig(
             address: "0x5Ee066cc1250E367423eD4Bad3b073241612811f",
             chainId: 1,
-            rpcUrl: "https://mainnet.infura.io/v3/\(infuraApiKey!)",
+            rpcUrl: "https://mainnet.infura.io/\(infuraApiKey!)",
             privacyMode: true
         )
     }()

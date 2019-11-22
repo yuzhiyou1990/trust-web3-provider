@@ -106,9 +106,6 @@ class TrustWeb3Provider extends EventEmitter {
       case "eth_getFilterLogs":
         this.eth_getFilterLogs(payload);
         break;
-      case "eth_subscribe":
-        this.eth_subscribe(payload);
-        break;
       default:
         this._rpc.call(payload)
         .then(data => this._resolve(payload.id, data))
@@ -249,10 +246,6 @@ class TrustWeb3Provider extends EventEmitter {
 
   eth_sendTransaction(payload) {
     this.postMessage("signTransaction", payload.id, payload.params[0]);
-  }
-
-  eth_subscribe(payload) {
-    this.postMessage("subscribe", payload.id, payload.params[0]);
   }
 
   eth_requestAccounts(payload) {

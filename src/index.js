@@ -14,6 +14,7 @@ class TrustWeb3Provider {
 
     this.callbacks = new Map;
     this.isTrust = true;
+    this.isMathWallet = true;
   }
 
   isConnected() {
@@ -29,6 +30,7 @@ class TrustWeb3Provider {
     this.setAddress(config.address);
 
     this.chainId = config.chainId;
+    this.networkVersion = config.chainId;
     this.rpc = new RPCServer(config.rpcUrl);
     this.filterMgr = new FilterMgr(this.rpc);
   }

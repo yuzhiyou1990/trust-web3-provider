@@ -250,7 +250,7 @@ class TrustWeb3Provider {
       window.webkit.messageHandlers["ethWeb3"].postMessage({
         "name": handler,
         "payload": data,
-        "id": id
+        "id": "" + id
       });
     } else {
       // don't forget to verify in the app

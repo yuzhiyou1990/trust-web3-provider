@@ -100,3 +100,5 @@ coverage.json
 *~
 .vscode/
 
+dist/
+dist/trust-min.js

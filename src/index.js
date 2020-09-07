@@ -12,7 +12,7 @@ class TrustWeb3Provider {
 
     this.idMapping = new IdMapping();
 
-    this.callbacks = new Map;
+    this.callbacks = new Map();
     this.isTrust = true;
     this.isMathWallet = true;
   }

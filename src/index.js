@@ -37,20 +37,27 @@ class TrustWeb3Provider {
     // this may be undefined somehow
     var that = this || window.ethereum;
     return that._sendAsync({
-      method: "eth_requestAccounts",
-      params: []
-    })
-    .then(result => {
-      return result.result;
-    });
+        method: "eth_requestAccounts",
+        params: []
+      })
+      .then(result => {
+        return result.result;
+      });
   }
-
+  request(payload = {}) {
+    // this may be undefined somehow
+    var that = this || window.ethereum;
+    return that._sendAsync(payload)
+      .then(result => {
+        return result.result;
+      });
+  }
   send(payload) {
     let response = {
       jsonrpc: "2.0",
       id: payload.id
     };
-    switch(payload.method) {
+    switch (payload.method) {
       case "eth_accounts":
         response.result = this.eth_accounts();
         break;
@@ -80,12 +87,12 @@ class TrustWeb3Provider {
   sendAsync(payload, callback) {
     if (Array.isArray(payload)) {
       Promise.all(payload.map(this._sendAsync.bind(this)))
-      .then(data => callback(null, data))
-      .catch(error => callback(error, null));
+        .then(data => callback(null, data))
+        .catch(error => callback(error, null));
     } else {
       this._sendAsync(payload)
-      .then(data => callback(null, data))
-      .catch(error => callback(error, null));
+        .then(data => callback(null, data))
+        .catch(error => callback(error, null));
     }
   }
 
@@ -103,7 +110,7 @@ class TrustWeb3Provider {
         }
       });
 
-      switch(payload.method) {
+      switch (payload.method) {
         case "eth_accounts":
           return this.sendResponse(payload.id, this.eth_accounts());
         case "eth_coinbase":
@@ -161,19 +168,28 @@ class TrustWeb3Provider {
   }
 
   eth_sign(payload) {
-    this.postMessage("signMessage", payload.id, {data: payload.params[1]});
+    this.postMessage("signMessage", payload.id, {
+      data: payload.params[1]
+    });
   }
 
   personal_sign(payload) {
-    this.postMessage("signPersonalMessage", payload.id, {data: payload.params[0]});
+    this.postMessage("signPersonalMessage", payload.id, {
+      data: payload.params[0]
+    });
   }
 
   personal_ecRecover(payload) {
-    this.postMessage("ecRecover", payload.id, {signature: payload.params[1], message: payload.params[0]});
+    this.postMessage("ecRecover", payload.id, {
+      signature: payload.params[1],
+      message: payload.params[0]
+    });
   }
 
   eth_signTypedData(payload) {
-    this.postMessage("signTypedMessage", payload.id, {data: payload.params[1]});
+    this.postMessage("signTypedMessage", payload.id, {
+      data: payload.params[1]
+    });
   }
 
   eth_sendTransaction(payload) {
@@ -186,45 +202,52 @@ class TrustWeb3Provider {
 
   eth_newFilter(payload) {
     this.filterMgr.newFilter(payload)
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+      .then(filterId => this.sendResponse(payload.id, filterId))
+      .catch(error => this.sendError(payload.id, error));
   }
 
   eth_newBlockFilter(payload) {
     this.filterMgr.newBlockFilter()
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+      .then(filterId => this.sendResponse(payload.id, filterId))
+      .catch(error => this.sendError(payload.id, error));
   }
 
   eth_newPendingTransactionFilter(payload) {
     this.filterMgr.newPendingTransactionFilter()
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+      .then(filterId => this.sendResponse(payload.id, filterId))
+      .catch(error => this.sendError(payload.id, error));
   }
 
   eth_uninstallFilter(payload) {
     this.filterMgr.uninstallFilter(payload.params[0])
-    .then(filterId => this.sendResponse(payload.id, filterId))
-    .catch(error => this.sendError(payload.id, error));
+      .then(filterId => this.sendResponse(payload.id, filterId))
+      .catch(error => this.sendError(payload.id, error));
   }
 
   eth_getFilterChanges(payload) {
     this.filterMgr.getFilterChanges(payload.params[0])
-    .then(data => this.sendResponse(payload.id, data))
-    .catch(error => this.sendError(payload.id, error));
+      .then(data => this.sendResponse(payload.id, data))
+      .catch(error => this.sendError(payload.id, error));
   }
 
   eth_getFilterLogs(payload) {
     this.filterMgr.getFilterLogs(payload.params[0])
-    .then(data => this.sendResponse(payload.id, data))
-    .catch(error => this.sendError(payload.id, error));
+      .then(data => this.sendResponse(payload.id, data))
+      .catch(error => this.sendError(payload.id, error));
   }
 
   postMessage(handler, id, data) {
     if (this.ready || handler === "requestAccounts") {
-      window.webkit.messageHandlers[handler].postMessage({
+      // android
+      // window["ethWeb3"].postMessage(JSON.stringify({
+      //   "name": handler,
+      //   "payload": data,
+      //   "id": id
+      // }));
+      // iOS
+      window.webkit.messageHandlers["ethWeb3"].postMessage({
         "name": handler,
-        "object": data,
+        "payload": data,
         "id": id
       });
     } else {
@@ -236,7 +259,10 @@ class TrustWeb3Provider {
   sendResponse(id, result) {
     let originId = this.idMapping.tryPopId(id) || id;
     let callback = this.callbacks.get(id);
-    let data = {jsonrpc: "2.0", id: originId};
+    let data = {
+      jsonrpc: "2.0",
+      id: originId
+    };
     if (typeof result === "object" && result.jsonrpc && result.result) {
       data.result = result.result;
     } else {

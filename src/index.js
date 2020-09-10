@@ -15,6 +15,8 @@ class TrustWeb3Provider {
     this.callbacks = new Map();
     this.isTrust = true;
     this.isMathWallet = true;
+
+    this.events = [];
   }
 
   isConnected() {
@@ -34,7 +36,12 @@ class TrustWeb3Provider {
     this.rpc = new RPCServer(config.rpcUrl);
     this.filterMgr = new FilterMgr(this.rpc);
   }
-
+  on(event = "", callback) {
+    this.events.push({
+      key: event,
+      callback: callback
+    });
+  }
   enable() {
     // this may be undefined somehow
     var that = this || window.ethereum;

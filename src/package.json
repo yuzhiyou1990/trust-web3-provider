@@ -4,7 +4,7 @@
   "description": "Trust Web3 Provider",
   "main": "index.js",
   "scripts": {
-    "build": "rm -rf ../dist && parcel build index.js -o trust-min.js -d ../dist",
+    "build": "rm -rf ../dist && parcel build index.js -o trust-min.js -d ../dist --no-source-maps",
     "watch": "rm -rf ../dist && parcel watch index.js -o trust-min.js -d ../dist",
     "lint": "eslint . --fix",
     "test": "jest"

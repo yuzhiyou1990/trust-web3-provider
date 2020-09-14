@@ -30,9 +30,8 @@ class TrustWeb3Provider {
 
   setConfig(config) {
     this.setAddress(config.address);
-
-    this.chainId = config.chainId;
-    this.networkVersion = config.chainId;
+    this.chainId = Utils.intToHex(config.chainId);
+    this.networkVersion = "" + config.chainId;
     this.rpc = new RPCServer(config.rpcUrl);
     this.filterMgr = new FilterMgr(this.rpc);
   }
@@ -169,11 +168,11 @@ class TrustWeb3Provider {
   }
 
   net_version() {
-    return this.chainId.toString(10) || null;
+    return this.net_version;
   }
 
   eth_chainId() {
-    return "0x" + this.chainId.toString(16);
+    return this.chainId;
   }
 
   eth_sign(payload) {

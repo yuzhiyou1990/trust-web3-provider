@@ -168,7 +168,7 @@ class TrustWeb3Provider {
   }
 
   net_version() {
-    return this.net_version;
+    return this.networkVersion;
   }
 
   eth_chainId() {

@@ -43,7 +43,7 @@ class TrustWeb3Provider {
   }
   enable() {
     // this may be undefined somehow
-    var that = this || window.ethereum;
+    var that = (this && this._sendAsync) ? this : window.ethereum;
     return that._sendAsync({
         method: "eth_requestAccounts",
         params: []
@@ -54,7 +54,7 @@ class TrustWeb3Provider {
   }
   request(payload = {}) {
     // this may be undefined somehow
-    var that = this || window.ethereum;
+    var that = (this && this._sendAsync) ? this : window.ethereum;
     return that._sendAsync(payload)
       .then(result => {
         return result.result;

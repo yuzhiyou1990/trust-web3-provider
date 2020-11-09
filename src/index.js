@@ -15,6 +15,7 @@ class TrustWeb3Provider {
     this.callbacks = new Map();
     this.isTrust = true;
     this.isMathWallet = true;
+    this.isMetaMask = true;
 
     this.events = [];
   }

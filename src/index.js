@@ -29,6 +29,9 @@ class TrustWeb3Provider {
     this.ready = !!address;
   }
 
+  setMaxListeners(listeners){
+  }
+  
   setConfig(config) {
     this.setAddress(config.address);
     this.chainId = Utils.intToHex(config.chainId);

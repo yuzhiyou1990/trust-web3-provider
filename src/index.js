@@ -15,6 +15,7 @@ class TrustWeb3Provider {
     this.callbacks = new Map();
     this.isTrust = true;
     this.isMathWallet = true;
+    this.isMetaMask = true;
 
     this.events = [];
   }
@@ -28,6 +29,9 @@ class TrustWeb3Provider {
     this.ready = !!address;
   }
 
+  setMaxListeners(listeners){
+  }
+  
   setConfig(config) {
     this.setAddress(config.address);
     this.chainId = Utils.intToHex(config.chainId);

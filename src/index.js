@@ -31,6 +31,9 @@ class TrustWeb3Provider {
 
   setMaxListeners(listeners){
   }
+
+  addListener(e,t){
+  }
   
   setConfig(config) {
     this.setAddress(config.address);
